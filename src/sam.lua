@@ -40,13 +40,46 @@ function SSF.Sam.isSEADMissile(name)
 	return _sead_set[name] == true
 end
 
+function SSF.Sam.enableEmissions(sam_group, enable)
+	SSF.Logger:info("Setting emissions for SAM site..." .. mist.utils.tableShow(sam_group))
+	if not sam_group then
+		SSF.Logger:error("No SAM group provided to enableEmissions")
+		return
+	end
+	local controller = sam_group:getController()
+	if not controller then
+		SSF.Logger:error("No controller found for SAM site: " .. sam_group:getName())
+		SSF.Logger:error("Invalid SAM group provided to enableEmissions - " .. mist.utils.tableShow(sam_group))
+		return
+	end
+	sam_group:enableEmission(enable)
+	local state = enable and "enabled" or "disabled"
+	SSF.Logger:info("Emissions " .. state .. " for SAM site: " .. sam_group:getName())
+end
+
+-- Checks for all configured SAM sites if it detects a SEAD missile
+local function detect_sead_missile()
+    SSF.Logger:info("Checking for SEAD missiles...")
+    -- prototype with fixed values
+    -- SSF.Logger:info("Disabling radar for SAM site: " .. sam_site.groupName)
+	local dcs_sam_group = Group.getByName("Ground-1")
+	if not dcs_sam_group then
+		SSF.Logger:error("Could not find DCS group for SAM site: " .. sam_site.groupName)
+		return
+	end
+	SSF.Sam.enableEmissions(dcs_sam_group, false)
+    -- SSF.Sam.enableEmissions(sam_site, false)
+end
+
 local anti_radiation_launch = {}												
 function anti_radiation_launch:onEvent(event)
     if event.id == world.event.S_EVENT_SHOT then
         local weapon = event.weapon
         if SSF.Sam.isSEADMissile(weapon:getTypeName()) then
-            local text = "SEAD missile launched: " .. mist.utils.tableShow(weapon:getDesc())
+            local text = "SEAD missile launched: " .. weapon:getTypeName()
             SSF.Logger:info(text)
+            --mist.scheduleFunction(detect_sead_missile, {}, timer.getTime() + 1, 10, timer.getTime()+300)
+			detect_sead_missile()
         end
     end
 end
